@@ -42,12 +42,11 @@ setGlobalDispatcher(
           }),
 );
 
-export const createLogger = (module: string, options?: pino.LoggerOptions) =>
-    pino({
-        msgPrefix: `[${module}] `,
-        redact: ['flaticonRefreshToken', 'flaticonToken'],
-        ...options,
-    });
+const logger = pino({
+    redact: ['flaticonRefreshToken', 'flaticonToken'],
+});
+
+export const createLogger = (module: string, options?: pino.ChildLoggerOptions) => logger.child({ module }, options);
 
 export class FetchResponseError extends Error {
     status!: number;

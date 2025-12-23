@@ -13,23 +13,21 @@ app.use(async (ctx, next) => {
 
     await next();
 
-    const statusCode = ctx.res.status;
-    const statusString = process.env.NO_COLOR
-        ? statusCode.toString()
-        : `\x1b[${[39, 94, 92, 96, 93, 91, 95][(statusCode / 100) | 0]}m${statusCode}\x1b[0m`;
-
-    const remoteAddress =
-        ctx.req.header('X-Real-IP') ??
-        ctx.req.header('X-Forwarded-For')?.split(',').pop()?.trim() ??
-        ctx.env.incoming.socket.remoteAddress;
-
     httpLogger.info(
-        '%s %s %s %s %s',
-        remoteAddress,
-        ctx.req.method,
-        ctx.req.path,
-        statusString,
-        `${(performance.now() - startTime).toFixed(2)}ms`,
+        {
+            http: {
+                remoteAddress:
+                    ctx.req.header('X-Real-IP') ??
+                    ctx.req.header('X-Forwarded-For')?.split(',').pop()?.trim() ??
+                    ctx.env.incoming.socket.remoteAddress,
+                remotePort: ctx.env.incoming.socket.remotePort,
+                method: ctx.req.method,
+                path: ctx.req.path,
+                status: ctx.res.status,
+                time: performance.now() - startTime,
+            },
+        },
+        '',
     );
 });
 
