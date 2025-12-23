@@ -1,7 +1,7 @@
 {
     "type": "module",
     "scripts": {
-        "check": "biome check --write --unsafe src",
+        "check": "biome check --write --unsafe",
         "dev": "tsx watch --env-file=.env src/index.ts | pino-pretty",
         "build": "esbuild --bundle --minify --charset=utf8 --platform=node --format=esm --packages=external --outfile=dist/index.js src/index.ts",
         "serve": "node --env-file=.env dist/index.js"
