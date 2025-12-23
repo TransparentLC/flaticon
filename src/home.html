@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-hans">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="author" content="TransparentLC">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown.min.css">
+    <style>
+        .markdown-body {
+            box-sizing: border-box;
+            min-width: 200px;
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 45px;
+        }
+
+        @media (max-width: 767px) {
+            .markdown-body {
+                padding: 15px;
+            }
+        }
+    </style>
+    <title>Flaticon SVG 格式图标免登录下载</title>
+</head>
+<body class="markdown-body">
+    <h1>Flaticon SVG 格式图标免登录下载</h1>
+    <p>
+        <a href="https://github.com/TransparentLC/flaticon"><img src="https://img.shields.io/badge/GitHub-TransparentLC/flaticon-121011.svg?logo=github&logoColor=white"></a>
+        <a href="userscript.user.js"><img src="https://img.shields.io/badge/Userscript-00485B?logo=tampermonkey&logoColor=white"></a>
+    </p>
+    <p><img src="https://p.sda1.dev/29/b5b776ca30309a86594b2113dbceaea3/7Qjt.webp"></p>
+    <p><a href="https://www.flaticon.com/" target="_blank" rel="noreferrer noopener nofollow">Flaticon</a> 是一个提供免费商用图标素材下载的网站，但是下载 SVG 格式的图标需要登录并开通会员。</p>
+    <p>你可以将图标的 URL 粘贴到这里，转换链接后直接下载 SVG 格式的图标。</p>
+    <p>实现原理：<a href="https://akarin.dev/2025/12/06/download-svg-from-flaticon/" target="_blank" rel="noopener">如何免登录从 Flaticon 下载 SVG 格式的图标 | 存在感消失的地方|ω•`)</a></p>
+    <p style="display:flex"><input id="source" type="text" placeholder="https://www.flaticon.com/free-icon/foo-bar_12345678" style="flex-grow:1"> <button id="convert" style="margin-left:.5em">转换</button></p>
+    <p>下载地址：<a id="result" target="_blank" rel="noreferrer noopener" download></a></p>
+    <p>也可以添加<a href="userscript.user.js">用户脚本</a>（需要安装 <a href="https://www.tampermonkey.net/" target="_blank" rel="noreferrer noopener nofollow">Tampermonkey</a> 或其他类似扩展），下载图标更方便：</p>
+    <ul>
+        <li>打开图标后，点击“SVG”或“Copy SVG”按钮，原本需要会员才能下载或复制的 SVG 格式图标现在可以直接下载或复制。</li>
+        <li>按钮的颜色会从黄色变为和 PNG 格式一样的绿色和灰色，并删去皇冠图标。</li>
+        <li>也可以在右键菜单中点击“下载当前打开的图标”。</li>
+    </ul>
+    <blockquote>
+        <p><strong>⚠️注意：请不要使用这个服务大量批量下载不同的图标！</strong></p>
+        <p>这个服务和 Cloudflare 都会对图标进行缓存，未命中缓存的图标将从 Flaticon 获取。为了保证服务尽可能可用，这个服务对未命中缓存的请求应用了与 Flaticon 相同的请求频率限制，目前推测为<strong>每分钟限制 4 次</strong>。</p>
+    </blockquote>
+    <footer style="text-align:center"><small>© 2025 ✨小透明・宸✨</small></footer>
+    <script>
+        (() => {
+            const h = location.origin + location.pathname;
+            const s = document.getElementById('source');
+            const t = document.getElementById('result');
+            document.getElementById('convert').onclick = () => {
+                const u = new URL(s.value);
+                if (u.hostname !== 'www.flaticon.com') return;
+                const m = /^\/free-(?:icon|sticker|icon-font|animated-icon)\/([A-Za-z\d-]*_\d+)$/.exec(u.pathname);
+                if (!m) return;
+                t.href = t.innerText = new URL(`${h}${m[1]}.svg`);
+            };
+        })()
+    </script>
+</body>
+</html>
