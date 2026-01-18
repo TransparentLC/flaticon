@@ -96,7 +96,7 @@ app.get('/userscript.user.js', ctx => {
 
 let flaticonToken = '';
 let flaticonTokenExpire = 0;
-const flaticonUserAgent = 'Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko';
+const flaticonUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0';
 
 const flaticonTokenUpdate = async () => {
     if (Date.now() < flaticonTokenExpire) return;
@@ -203,6 +203,7 @@ app.get(
             try {
                 const iconUrl = await fetch(`https://www.flaticon.com/editor/icon/svg/${iconId}?type=${iconType}`, {
                     headers: {
+                        Connection: 'keep-alive',
                         'User-Agent': flaticonUserAgent,
                         Cookie: `FI_TOKEN=${flaticonToken}; FI_REFRESH_TOKEN=${config.flaticonRefreshToken}`,
                     },
