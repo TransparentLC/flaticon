@@ -96,7 +96,7 @@ app.get('/userscript.user.js', ctx => {
 
 let flaticonToken = '';
 let flaticonTokenExpire = 0;
-const flaticonUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0';
+const flaticonUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:159.0) Gecko/20100101 Firefox/159.0';
 
 const flaticonTokenUpdate = async () => {
     if (Date.now() < flaticonTokenExpire) return;
@@ -116,7 +116,16 @@ const flaticonTokenUpdate = async () => {
             break;
         }
     }
-    if (!flaticonToken) throw new Error('Failed to refresh flaticon token');
+    if (!flaticonToken) {
+        const body = await r.text();
+        if (body.includes('triggerInterstitialChallenge')) {
+            throw new Error("Triggered flaticon's challenge");
+        } else if (body.includes('Our security filter flagged something')) {
+            throw new Error("Flagged by flaticon's security filter");
+        } else {
+            throw new Error('Cannot get flaticon token from cookie');
+        }
+    }
 };
 
 const iconCache = new LRUCache<number, Uint8Array>({
@@ -172,7 +181,11 @@ app.get(
             );
             served.fromCache++;
         } else {
-            await flaticonTokenUpdate();
+            try {
+                await flaticonTokenUpdate();
+            } catch (err) {
+                return ctx.body(`Failed to refresh flaticon token: ${err}`, 500);
+            }
 
             const iconTypeChecks = await Promise.all(
                 [
