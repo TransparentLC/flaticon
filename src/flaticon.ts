@@ -5,7 +5,7 @@ import { cors } from 'hono/cors';
 import { type RateLimitInfo, rateLimiter } from 'hono-rate-limiter';
 import { LRUCache } from 'lru-cache';
 import { Builder } from 'selenium-webdriver';
-import firefox from 'selenium-webdriver/firefox';
+import firefox from 'selenium-webdriver/firefox.js';
 import { fetch } from 'undici';
 import { config, createLogger, FetchResponseError, raiseForStatus } from './common';
 
