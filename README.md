@@ -8,7 +8,7 @@
 
 你也可以自己部署这个项目，将 `.env.example` 复制为 `.env` 按照说明进行一些设置即可。
 
-由于 Flaticon 近日添加了风控，需要使用无头浏览器获得 Cookie，因此部署时需要安装一个浏览器和对应的 WebDriver。
+由于 Flaticon 近日添加了风控，需要使用无头浏览器获得 Cookie，因此部署时需要安装 Firefox 和 [GeckoDriver](https://github.com/mozilla/geckodriver)。
 
 ```sh
 pnpm install

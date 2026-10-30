@@ -5,6 +5,7 @@ import { cors } from 'hono/cors';
 import { type RateLimitInfo, rateLimiter } from 'hono-rate-limiter';
 import { LRUCache } from 'lru-cache';
 import { Builder } from 'selenium-webdriver';
+import firefox from 'selenium-webdriver/firefox';
 import { fetch } from 'undici';
 import { config, createLogger, FetchResponseError, raiseForStatus } from './common';
 
@@ -120,11 +121,11 @@ const flaticonTokenUpdate = async () => {
     if (!flaticonToken) {
         const body = await r.text();
         if (body.includes('triggerInterstitialChallenge')) {
-            if (!config.seleniumBrowser) {
-                throw new Error("Triggered flaticon's challenge.");
-            }
             logger.warn("Triggered flaticon's challenge. Try to solve with selenium.");
-            const driver = await new Builder().forBrowser(config.seleniumBrowser).build();
+            const driver = await new Builder()
+                .forBrowser('firefox')
+                .setFirefoxOptions(new firefox.Options().addArguments('--headless'))
+                .build();
             try {
                 await driver.get('https://www.flaticon.com/');
                 await driver.manage().addCookie({
@@ -140,6 +141,8 @@ const flaticonTokenUpdate = async () => {
                     flaticonTokenExpire = (flaticonCookie.expiry as number) * 1000;
                     logger.info({ flaticonToken, expire: new Date(flaticonTokenExpire) }, 'Update FI_TOKEN');
                 }
+            } catch (err) {
+                logger.error(`Failed to solve flaticon's challenge: ${err}`);
             } finally {
                 await driver.quit();
             }
