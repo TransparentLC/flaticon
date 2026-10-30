@@ -1,5 +1,6 @@
 import { STATUS_CODES } from 'node:http';
 import pino from 'pino';
+import type { Browser } from 'selenium-webdriver';
 import { Agent, ProxyAgent, type Response, setGlobalDispatcher } from 'undici';
 
 export const config: {
@@ -10,6 +11,7 @@ export const config: {
     base: string;
     origin?: string;
     url: URL;
+    seleniumBrowser: Browser;
     flaticonRefreshToken: string;
     flaticonCacheSize: number;
     flaticonAttachment: boolean;
@@ -21,6 +23,7 @@ export const config: {
     uds: process.env.UDS,
     base: process.env.BASE ?? '/',
     origin: process.env.ORIGIN,
+    seleniumBrowser: process.env.SELENIUM_BROWSER,
     flaticonRefreshToken: process.env.FI_REFRESH_TOKEN ?? '',
     // biome-ignore lint/style/noNonNullAssertion: no reason
     flaticonCacheSize: parseInt(process.env.FI_CACHE_SIZE!, 10) || 8,

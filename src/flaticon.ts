@@ -4,6 +4,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { type RateLimitInfo, rateLimiter } from 'hono-rate-limiter';
 import { LRUCache } from 'lru-cache';
+import { Builder } from 'selenium-webdriver';
 import { fetch } from 'undici';
 import { config, createLogger, FetchResponseError, raiseForStatus } from './common';
 
@@ -119,7 +120,32 @@ const flaticonTokenUpdate = async () => {
     if (!flaticonToken) {
         const body = await r.text();
         if (body.includes('triggerInterstitialChallenge')) {
-            throw new Error("Triggered flaticon's challenge");
+            if (!config.seleniumBrowser) {
+                throw new Error("Triggered flaticon's challenge.");
+            }
+            logger.warn("Triggered flaticon's challenge. Try to solve with selenium.");
+            const driver = await new Builder().forBrowser(config.seleniumBrowser).build();
+            try {
+                await driver.get('https://www.flaticon.com/');
+                await driver.manage().addCookie({
+                    name: 'FI_REFRESH_TOKEN',
+                    value: config.flaticonRefreshToken,
+                    path: '/',
+                });
+                await driver.navigate().refresh();
+                const cookies = await driver.manage().getCookies();
+                const flaticonCookie = cookies.find(e => e.name === 'FI_TOKEN');
+                if (flaticonCookie) {
+                    flaticonToken = flaticonCookie.value;
+                    flaticonTokenExpire = (flaticonCookie.expiry as number) * 1000;
+                    logger.info({ flaticonToken, expire: new Date(flaticonTokenExpire) }, 'Update FI_TOKEN');
+                }
+            } finally {
+                await driver.quit();
+            }
+            if (!flaticonToken) {
+                throw new Error("Triggered flaticon's challenge and failed to solve with selenium.");
+            }
         } else if (body.includes('Our security filter flagged something')) {
             throw new Error("Flagged by flaticon's security filter");
         } else {
@@ -184,6 +210,7 @@ app.get(
             try {
                 await flaticonTokenUpdate();
             } catch (err) {
+                logger.error(`Failed to refresh flaticon token: ${err}`);
                 return ctx.body(`Failed to refresh flaticon token: ${err}`, 500);
             }
 
