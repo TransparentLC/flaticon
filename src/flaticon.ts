@@ -137,6 +137,7 @@ const flaticonTokenUpdate = async () => {
             const rVerify = await fetch('https://www.flaticon.com/_sec/verify?provider=interstitial', {
                 method: 'POST',
                 headers: {
+                    'User-Agent': flaticonUserAgent,
                     'Content-Type': 'application/json',
                     Cookie: `ak_bmsc=${akbmsc}`,
                 },
