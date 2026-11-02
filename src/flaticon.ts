@@ -195,6 +195,15 @@ app.get(
         maxAge: 86400,
     }),
     async (ctx, next) => {
+        const referer = ctx.req.header('Referer');
+        if (
+            referer &&
+            !referer.startsWith('https://www.flaticon.com/') &&
+            config.origin &&
+            !referer.startsWith(`${config.url.origin}/`)
+        ) {
+            return ctx.body('Please do not directly linking to these icons. Save it instead!', 403);
+        }
         ctx.set(
             'iconId',
             // biome-ignore lint/style/noNonNullAssertion: no reason
