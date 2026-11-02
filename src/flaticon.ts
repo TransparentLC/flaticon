@@ -4,8 +4,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { type RateLimitInfo, rateLimiter } from 'hono-rate-limiter';
 import { LRUCache } from 'lru-cache';
-import { Builder } from 'selenium-webdriver';
-import firefox from 'selenium-webdriver/firefox.js';
+import { parseSetCookie } from 'set-cookie-parser';
 import { fetch } from 'undici';
 import { config, createLogger, FetchResponseError, raiseForStatus } from './common';
 
@@ -109,42 +108,62 @@ const flaticonTokenUpdate = async () => {
         },
     });
     flaticonToken = '';
-    for (const [k, v] of r.headers.entries()) {
-        if (k.toLowerCase() === 'set-cookie' && v.match(/^FI_TOKEN=(.+?);/)) {
-            // biome-ignore lint/style/noNonNullAssertion: no reason
-            flaticonToken = v.match(/^FI_TOKEN=(.+?);/)![1]!;
-            flaticonTokenExpire = JSON.parse(atob(flaticonToken.split('.')[1])).exp * 1000;
-            logger.info({ flaticonToken, expire: new Date(flaticonTokenExpire) }, 'Update FI_TOKEN');
-            break;
-        }
+    const cookies = parseSetCookie(r, { map: true });
+    if (cookies.FI_TOKEN) {
+        flaticonToken = cookies.FI_TOKEN.value;
+        flaticonTokenExpire = JSON.parse(atob(flaticonToken.split('.')[1])).exp * 1000;
+        logger.info({ flaticonToken, expire: new Date(flaticonTokenExpire) }, 'Update FI_TOKEN');
     }
     if (!flaticonToken) {
         const body = await r.text();
         if (body.includes('triggerInterstitialChallenge')) {
-            logger.warn("Triggered flaticon's challenge. Try to solve with selenium.");
-            const driver = await new Builder()
-                .forBrowser('firefox')
-                .setFirefoxOptions(new firefox.Options().addArguments('--headless'))
-                .build();
-            try {
-                await driver.get('https://www.flaticon.com/');
-                await driver.manage().addCookie({
-                    name: 'FI_REFRESH_TOKEN',
-                    value: config.flaticonRefreshToken,
-                    path: '/',
-                });
-                await driver.navigate().refresh();
-                const cookies = await driver.manage().getCookies();
-                const flaticonCookie = cookies.find(e => e.name === 'FI_TOKEN');
-                if (flaticonCookie) {
-                    flaticonToken = flaticonCookie.value;
-                    flaticonTokenExpire = (flaticonCookie.expiry as number) * 1000;
-                    logger.info({ flaticonToken, expire: new Date(flaticonTokenExpire) }, 'Update FI_TOKEN');
-                }
-            } catch (err) {
-                logger.error(`Failed to solve flaticon's challenge: ${err}`);
-            } finally {
-                await driver.quit();
+            logger.info("Triggered flaticon's challenge. Try to solve with naive match.");
+            if (!cookies.ak_bmsc) {
+                throw new Error("Triggered flaticon's challenge. Tried to solve but failed to match ak_bmsc.");
+            }
+            let akbmsc = cookies.ak_bmsc.value;
+            const bmVerifyMatch = body.match(/"bm-verify": "([A-Za-z\d/+]+={0,2})"/);
+            if (!bmVerifyMatch) {
+                throw new Error("Triggered flaticon's challenge. Tried to solve but failed to match bm-verify.");
+            }
+            const bmVerify = bmVerifyMatch[1];
+            const powMatch = body.match(
+                /<script>\s*var i = (\d+); var j = i \+ Number\("(\d+)" \+ "(\d+)"\);\s*<\/script>/,
+            );
+            if (!powMatch) {
+                throw new Error("Triggered flaticon's challenge. Tried to solve but failed to match POW script.");
+            }
+            const varJ = parseInt(powMatch[1]) + parseInt(powMatch[2] + powMatch[3]);
+            const rVerify = await fetch('https://www.flaticon.com/_sec/verify?provider=interstitial', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Cookie: `ak_bmsc=${akbmsc}`,
+                },
+                body: JSON.stringify({
+                    'bm-verify': bmVerify,
+                    pow: varJ,
+                }),
+            });
+            if (rVerify.status !== 200) {
+                throw new Error("Triggered flaticon's challenge. Tried to solve but failed to complete verification.");
+            }
+            const cookiesVerify = parseSetCookie(rVerify, { map: true });
+            if (!cookiesVerify.ak_bmsc) {
+                throw new Error("Triggered flaticon's challenge. Tried to solve but failed to match ak_bmsc.");
+            }
+            akbmsc = cookiesVerify.ak_bmsc.value;
+            const rAgain = await fetch('https://www.flaticon.com/', {
+                headers: {
+                    'User-Agent': flaticonUserAgent,
+                    Cookie: `ak_bmsc=${akbmsc}; FI_REFRESH_TOKEN=${config.flaticonRefreshToken}`,
+                },
+            });
+            const cookiesAgain = parseSetCookie(rAgain, { map: true });
+            if (cookiesAgain.FI_TOKEN) {
+                flaticonToken = cookiesAgain.FI_TOKEN.value;
+                flaticonTokenExpire = JSON.parse(atob(flaticonToken.split('.')[1])).exp * 1000;
+                logger.info({ flaticonToken, expire: new Date(flaticonTokenExpire) }, 'Update FI_TOKEN');
             }
             if (!flaticonToken) {
                 throw new Error("Triggered flaticon's challenge and failed to solve with selenium.");
